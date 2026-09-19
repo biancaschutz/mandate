@@ -1,0 +1,13 @@
+name: Scrape UN Women
+
+on:
+  schedule:
+    - cron: "40 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.unwomen
+    secrets: inherit

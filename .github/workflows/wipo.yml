@@ -1,0 +1,13 @@
+name: Scrape WIPO
+
+on:
+  schedule:
+    - cron: "25 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.wipo
+    secrets: inherit

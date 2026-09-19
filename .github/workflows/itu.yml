@@ -1,0 +1,13 @@
+name: Scrape ITU
+
+on:
+  schedule:
+    - cron: "15 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.itu
+    secrets: inherit

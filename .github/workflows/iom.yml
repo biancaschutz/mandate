@@ -1,0 +1,13 @@
+name: Scrape IOM
+
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.iom
+    secrets: inherit

@@ -1,0 +1,13 @@
+name: Scrape HRW
+
+on:
+  schedule:
+    - cron: "35 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.hrw
+    secrets: inherit

@@ -1,0 +1,10 @@
+scrapers/cleaner.py
+scrapers/combiner.py
+
+__pycache__
+scrapers/__pycache__/
+
+.env
+.venv
+
+.DS_Store

@@ -1,0 +1,13 @@
+name: Scrape ILO
+
+on:
+  schedule:
+    - cron: "5 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.ilo
+    secrets: inherit

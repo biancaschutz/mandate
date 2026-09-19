@@ -1,0 +1,35 @@
+name: Run all scrapers
+
+on:
+  workflow_dispatch:
+
+jobs:
+  unwomen:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.unwomen
+    secrets: inherit
+
+  unicef:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.unicef
+    secrets: inherit
+
+  hrw:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.hrw
+    secrets: inherit
+
+  itu:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.itu
+    secrets: inherit
+
+  iom:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.iom
+    secrets: inherit

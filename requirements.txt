@@ -1,0 +1,6 @@
+pymongo
+pandas
+requests
+httpx
+beautifulsoup4
+rapidfuzz
