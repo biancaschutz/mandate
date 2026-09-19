@@ -33,3 +33,15 @@ jobs:
     with:
       module: scrapers.iom
     secrets: inherit
+    
+  ilo:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.ilo
+    secrets: inherit
+
+  wipo:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.wipo
+    secrets: inherit
