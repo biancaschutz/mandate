@@ -107,20 +107,76 @@ YEARS_REGEX = re.compile(
 )
 
 
+# exclude ages (issue flagged by WTO internship reading "be at least 21 years at the time of the internship (and no older than 30 years old at the time of the internship for the China WTO Accessions Internship Programme and China General Internship Programme).")
+
+AGE_AFTER_RE = re.compile(
+    r"""^\s*[-]?\s*(?:
+        old\b
+      | of\s+age\b
+      | (?:or|and)\s+(?:older|younger|over|under|above|below)\b
+      | (?:at|on|by)\s+the\s+(?:time|date|start|beginning)\b
+      | d['’]\s*[aâ]ge\b
+      | de\s+edad\b
+      | (?:r[ée]volus?|cumplidos?)\b
+    )""",
+    re.IGNORECASE | re.VERBOSE | re.UNICODE,
+)
+
+AGE_BEFORE_RE = re.compile(
+    r"""(?:
+        \bage[sd]?\b[^\d]{0,30}
+      | \b[âa]g[ée]e?s?\b[^\d]{0,30}
+      | \bedad\b[^\d]{0,30}
+      | \b(?:older|younger)\s+than\s+
+      | \bbetween\s+(?:the\s+ages\s+of\s+)?\d+\s+and\s+
+    )$""",
+    re.IGNORECASE | re.VERBOSE | re.UNICODE,
+)
+
+
+AGE_BE_RE = re.compile(
+    r"""\b(?:be|is|are)\s+
+        (?:at\s+least|over|under|below|above|
+           (?:no|not)\s+(?:older|more)\s+than)\s+$""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+EXPERIENCE_WORDS_RE = re.compile(
+    r"experience|expérience|experiencia", re.IGNORECASE | re.UNICODE
+)
+
+MIN_AGE_VALUE = 18 
+
+
+def _is_age_mention(text: str, m: re.Match, value: int | None) -> bool:
+    after = text[m.end():m.end() + 40]
+    if AGE_AFTER_RE.match(after):
+        return True
+
+    before = re.split(r"[.;\n]", text[:m.start()])[-1][-80:]
+    if AGE_BEFORE_RE.search(before):
+        return True
+    return bool(value is not None and value >= MIN_AGE_VALUE and AGE_BE_RE.search(before) and not EXPERIENCE_WORDS_RE.search(before))
+
+
 def extract_years(text: str) -> list[int]:
     if not text:
         return []
     results = []
     for m in YEARS_REGEX.finditer(text):
         if m.group("range_start"):
-            results.append(int(m.group("range_start")))  # lower bound of ranges, ex 3-5 years as 3 years
+            value = int(m.group("range_start"))  # lower bound of ranges, ex 3-5 years as 3 years
         elif m.group("word"):
             paren = m.group("paren")
-            results.append(
-                int(paren) if paren else NUM_WORDS[m.group("word").lower()]
-            )
+            value = int(paren) if paren else NUM_WORDS[m.group("word").lower()]
         elif m.group("digit"):
-            results.append(int(m.group("digit")))
+            value = int(m.group("digit"))
+        else:
+            continue
+
+        if _is_age_mention(text, m, value):
+            continue
+        results.append(value)
     return results
 
 
