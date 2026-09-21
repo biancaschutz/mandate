@@ -51,20 +51,20 @@ def get_heading_number(div):
     return int(m.group(1)) if m else None
 
 
-def extract_posting_date(job_soup: BeautifulSoup, raw_text: str):
-    """
-    WIPO's taleo website uses id in HTML typically in the jobdetail page to identify the posting date 
-    For example, 
-    <span id="requisitionDescriptionInterface.reqPostingDate.row1" class="text" title="">18-Jul-2026, 10:08:47 AM</span>
-    """
-    span = job_soup.find(
-        "span", id=lambda x: x and "requisitionDescriptionInterface.reqPostingDate" in x
-    )
-    # if it's found, then deal with it
-    if span is not None and span.get_text(strip=True):
-        return span.get_text(strip=True)
+DATE_RE = re.compile(r"\b(\d{1,2}-[A-Za-z]{3}-\d{4})\b")
 
-    # if not, fallback to date of scraping (today)
+def extract_posting_date(html: str) -> datetime.date:
+    dates = []
+    for s in DATE_RE.findall(html):
+        try:
+            dates.append(datetime.datetime.strptime(s, "%d-%b-%Y").date())
+        except ValueError:
+            pass
+
+    if dates:
+        return min(dates)  # posting date < unposting date
+
+    print("WARNING: no dates found, falling back to today")
     return datetime.datetime.now().date()
 
 
@@ -150,7 +150,7 @@ def fetch_wipo_results(url=P_URL, page_size=25, delay=0.3, session=None) -> tupl
 
 
 def build_wipo_df(results=None, session=None, type = None) -> pd.DataFrame:
-    print("Fetching IOM listings...")
+    print("Fetching WIPO listings...")
     if results is None:
         results, session = fetch_wipo_results()
     elif session is None:
@@ -227,10 +227,11 @@ def build_wipo_df(results=None, session=None, type = None) -> pd.DataFrame:
                 posting_dates.append(None)
                 appended_quals = appended_date = appended_edu = True
                 continue
- 
+
+            
             job_soup = BeautifulSoup(response.text, "html.parser")
- 
-            posting_dates.append(extract_posting_date(job_soup, response.text))
+            print(extract_posting_date(response.text))
+            posting_dates.append(extract_posting_date(response.text))
             appended_date = True
  
             hidden = job_soup.find("input", {"id": "initialHistory"})
