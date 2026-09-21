@@ -36,7 +36,7 @@ EDU = {  # checked in this order: highest level first
         "Student",
         "secondary school",
     ],
-    "O": ["Qualified lawyer"],
+    "O": ["qualified lawyer", "medical degree", "PhD"],
 }
 
 EDU_PATTERNS = {

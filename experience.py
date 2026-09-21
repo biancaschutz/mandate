@@ -229,7 +229,7 @@ def career_stage(job_level, job_type, qualifications, years, title=None) -> str:
     internship = looks_like_internship(job_type, title) or bool(
         qualifications and INTERN.search(qualifications)
     )
-    if internship and (not years or years <= 2):
+    if internship:
         return "EL"
 
     # check years of experience

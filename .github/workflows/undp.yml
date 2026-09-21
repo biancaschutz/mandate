@@ -1,0 +1,13 @@
+name: Scrape UNDP
+
+on:
+  schedule:
+    - cron: "50 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.undp
+    secrets: inherit
