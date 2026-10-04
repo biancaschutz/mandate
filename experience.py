@@ -189,6 +189,9 @@ JOB_LEVELS = {
     "P5": "SL",
     "D1": "SL",
     "D2": "SL",
+    "Level 2 Middle": "MC", 
+    "Level 3 Senior": "SL", 
+    "Level 4 Executive": "SL"
 }
 
 JOB_LEVEL_RE = re.compile(r"\b(P[1-5]|D[12])\b")
