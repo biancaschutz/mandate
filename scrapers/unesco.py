@@ -62,11 +62,13 @@ def build_unesco_df():
 
             level = r.find("span", class_="jobDepartment").getText(strip=True).replace("-", "").replace("  ", " ")
 
+            closing_date = r.find("span", class_="jobShifttype").getText(strip=True)
+
             quals = str(BeautifulSoup(urlopen(job_url).read().decode("utf-8"), "html.parser").find("span", class_="jobdescription"))
 
             results.append({"_id": ORGANIZATION + id, "organization": ORGANIZATION, "title": title, "url": job_url, 
                             "requisition_id": id, "location": location, "country": country, "m49": m49, "job_level": level,
-                            "job_type": type, "qualifications": quals})
+                            "job_type": type, "qualifications": quals, "closing_date": closing_date})
 
 
     return pd.DataFrame(results)
