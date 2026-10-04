@@ -1,0 +1,13 @@
+name: Scrape UNESCO
+
+on:
+  schedule:
+    - cron: "30 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.unesco
+    secrets: inherit
