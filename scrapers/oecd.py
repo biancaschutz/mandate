@@ -99,7 +99,7 @@ def build_oecd_df():
                     country, m49 = normalize_country(location)
 
         results.append({"_id": ORGANIZATION + id, "title": title, "url": job_url, "location":location, "country":country or None, "m49":m49 or None, 
-                        "job_level": level, "organization": ORGANIZATION, "requisition_id": id, "quals": quals, "closing_date": closing_date or None, "posted_date": posted_date or None})
+                        "job_level": level, "organization": ORGANIZATION, "requisition_id": id, "qualifications": quals, "closing_date": closing_date or None, "posted_date": posted_date or None})
             
     return pd.DataFrame(results)
 
