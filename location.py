@@ -53,6 +53,23 @@ RULES = [
     (r"^Manila", "Manila, Philippines"),
     (r"^Nairobi", "Nairobi, Kenya"),
     (r"Multiple", "Multiple locations considered"),
+    (r"New York|New York, New York", "New York, United States of America"), 
+    (r"Copenhagen", "Copenhagen, Denmark"), 
+    (r"Cairo", "Cairo, Egypt"), 
+    (r"Dili", "Dili, Timor-Leste"), 
+    (r"Chi[sș]in[aă]u", "Chisinau, Moldova"), 
+    (r"Johannesburg", "Johannesburg, South Africa"), 
+    (r"Harare", "Harare, Zimbabwe"), 
+    (r"Lom[eé]", "Lome, Togo"), 
+    (r"Yang[o]+n", "Yangon, Myanmar"), 
+    (r"Kigali", "Kigali, Rwanda"), 
+    (r"Phnom-Penh", "Phnom-Penh, Cambodia"), 
+    (r"Kampala", "Kampala, Uganda"), 
+    (r"Lilongwe", "Lilongwe, Malawi"), 
+    (r"Abidjan", "Abidjan, Côte d'Ivoire"), 
+    (r"Sarajevo", "Sarajevo, Bosnia and Herzegovina"), 
+    (r"Tegucigalpa", "Tegucigalpa, Honduras"), 
+    (r"Dakar", "Dakar, Senegal")
 ]
 
 COUNTRY_CLEANUP = [(re.compile(p), r) for p, r in COUNTRY_FIXES]

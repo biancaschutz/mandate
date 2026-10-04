@@ -1,0 +1,13 @@
+name: Scrape UNFPA
+
+on:
+  schedule:
+    - cron: "20 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  call:
+    uses: ./.github/workflows/scrape.yml
+    with:
+      module: scrapers.unfpa
+    secrets: inherit
