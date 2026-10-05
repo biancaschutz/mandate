@@ -18,6 +18,12 @@ Data is upserted into a MongoDB table (see combiner.py), where data is stored in
 
 Using, if available, staff categories and grade levels, and falling back on string parsing, one categorization available is career stage. If you have any issues with the way we've done this (see experience.py), please raise a ticket and I'm open to adjusting the thinking behind it.
 
+## Other Disclaimers
+
 Using the job description, we also attempt with each listing to determine what minimum education level is required (ex. does it require a completed advanced university degree). 
 
 The data on this site is solely for personal use and to bridge the gap between so many different sites. Please contact me with any issues about data usage. 
+
+## Call for scraping assistance
+
+If you have experience with any of these libraries and would like to assist with speeding up working through the long list of organizations in #4, let me know! 
