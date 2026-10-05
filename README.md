@@ -8,6 +8,8 @@ Using Python scraping packages, each website requires a customized workflow depe
 
 For sites with APIs, the requests package is used. For sites without APIs, urllib and bs4 are used to pull data from the HTML structure. The latter requires more manual review and is more susceptible to mistakes.
 
+Disclaimer: I have also used AI (Claude free plan) in a limited capacity, driven by manual review by myself, to parse more complex problems, such as regex patterns. 
+
 ## Data storage
 
 Data is upserted into a MongoDB table (see combiner.py), where data is stored in a consistent format with unique ID identifiers. Before upserting, data is also parsed for categorization
