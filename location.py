@@ -6,7 +6,7 @@ from rapidfuzz import fuzz, process, utils
 
 from helpers import WHITESPACE
 
-# Scraping errors / spelling, last updated September 2026
+# Scraping errors / spelling, last updated October 4 2026
 LITERAL_FIXES = [
     ("Nairobi, Nairobi, Kenya", "Nairobi, Kenya"),
     ("Multiple duty stations, Multiple duty stations", "Multiple duty stations"),
@@ -18,6 +18,8 @@ LITERAL_FIXES = [
     ("Suva, Fiji/Pacific Island Countries", "Suva, Fiji"),
     ("Vienna CO, Austria", "Vienna, Austria"),
     ("Caracas, Bolivarian Republic of Venezuela", "Caracas, Venezuela"),
+    ("Jordan, Hashemite Kingdom", "Jordan"), 
+    ('["Switzerland"]', "Switzerland")
 ]
 
 # Homogenise country names, with options listed from longest to shortest to prevent shorter matches from matching inside longer 
@@ -39,7 +41,9 @@ COUNTRY_FIXES = [
             r"|Great Britain|Northern Ireland|England|UK|GB)\b"
         ),
         "United Kingdom of Great Britain and Northern Ireland",
-    ),
+    ), 
+(r"(?i)West\s+Bank\s*(?:&|and)\s*Gaza", "State of Palestine"),
+
 ]
 
 # dealing with repeated city/country options such as UNHQs in different formats and languages (ex. Geneva), and ensuring they have country names with them
@@ -74,24 +78,10 @@ RULES = [
 
 COUNTRY_CLEANUP = [(re.compile(p), r) for p, r in COUNTRY_FIXES]
 SPECIAL_CASES = [(re.compile(p, re.IGNORECASE), r) for p, r in RULES]
-
-def clean_location(raw: str | None) -> str:
-    """Clean one scraped location string (cached: locations repeat heavily)."""
-    if not isinstance(raw, str) or not raw.strip():
-        return ""
-    s = raw.strip()
-    for old, new in LITERAL_FIXES:
-        s = s.replace(old, new)
-    for pattern, repl in COUNTRY_CLEANUP:
-        s = pattern.sub(repl, s)
-    for pattern, repl in SPECIAL_CASES:
-        if pattern.search(s):
-            s = repl
-            break
-    return WHITESPACE.sub(" ", s).strip()
-
-
-# Getting M49 codes and homogenizing country names
+QUALIFIER = re.compile(
+    r",\s*(?:the\s+)?(?:rep(?:ublic)?|state|kingdom|islamic|arab|people'?s|fed(?:eral)?|dem(?:ocratic|\.)?|soc)\b[^,]*$",
+    re.IGNORECASE,
+)
 
 REMOTE = ("Remote", -1)
 MULTIPLE = ("Multiple locations considered", -2)
@@ -103,6 +93,56 @@ COUNTRY_CODES[412] = "Kosovo"  # per UNSD guidance
 
 COUNTRY_CODES_REV_LC = {name.casefold(): code for code, name in COUNTRY_CODES.items()} # lowercase, reversed so country names are keys instead of m49
 
+
+COUNTRY_ALIASES = {
+    "syria": "Syrian Arab Republic",
+    "bolivia": "Bolivia (Plurinational State of)",
+    "iran": "Iran (Islamic Republic of)",
+    "venezuela": "Venezuela (Bolivarian Republic of)",
+    "tanzania": "United Republic of Tanzania",
+    "south korea": "Republic of Korea",
+    "north korea": "Democratic People's Republic of Korea",
+    "moldova": "Republic of Moldova",
+    "netherlands": "Netherlands (Kingdom of the)",
+    "vietnam": "Viet Nam",
+    "russia": "Russian Federation",
+}
+ALIAS_CODES = {
+    k: COUNTRY_CODES_REV_LC[v.casefold()]
+    for k, v in COUNTRY_ALIASES.items()
+    if v.casefold() in COUNTRY_CODES_REV_LC
+}
+
+
+
+def strip_qualifier(s: str) -> str:
+    m = QUALIFIER.search(s)
+    if not m:
+        return s
+    tail = m.group(0).lstrip(", ").strip().casefold()
+    # keep it if the trailing segment is already a real country name
+    if tail in COUNTRY_CODES_REV_LC or tail in ALIAS_CODES:
+        return s
+    return s[: m.start()]
+
+def clean_location(raw: str | None) -> str:
+    """Clean one scraped location string (cached: locations repeat heavily)."""
+    if not isinstance(raw, str) or not raw.strip():
+        return ""
+    s = raw.strip()
+    for old, new in LITERAL_FIXES:
+        s = s.replace(old, new)
+    for pattern, repl in COUNTRY_CLEANUP:
+        s = pattern.sub(repl, s)
+    s = strip_qualifier(s)
+    for pattern, repl in SPECIAL_CASES:
+        if pattern.search(s):
+            s = repl
+            break
+    return WHITESPACE.sub(" ", s).strip()
+
+# Getting M49 codes and homogenizing country names
+
 def normalize_country(text: str | None) -> tuple[str, int | None]:
     """Return (country name, M49 code) for a cleaned location string.
 
@@ -113,12 +153,14 @@ def normalize_country(text: str | None) -> tuple[str, int | None]:
         return UNIDENTIFIED
     country = text.rsplit(",", 1)[-1].strip()
 
+
     if re.match(r"Remote", country, re.IGNORECASE):
         return REMOTE
     if re.match(r"Multiple", country, re.IGNORECASE):
         return MULTIPLE
 
-    code = COUNTRY_CODES_REV_LC.get(country.casefold())
+    key = country.casefold()
+    code = COUNTRY_CODES_REV_LC.get(key) or ALIAS_CODES.get(key)
     if code is not None:
         return COUNTRY_CODES[code], code
 
@@ -132,6 +174,7 @@ def normalize_country(text: str | None) -> tuple[str, int | None]:
     )
     if try_match is None:
         print(f"Unidentified country: {country} (from {text})")
+        
         return UNIDENTIFIED
     name, _, code = try_match
     return name, code
