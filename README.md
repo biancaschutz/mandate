@@ -8,7 +8,7 @@ Using Python scraping packages, each website requires a customized workflow depe
 
 For sites with APIs, the requests package is used. For sites without APIs, urllib and bs4 are used to pull data from the HTML structure. The latter requires more manual review and is more susceptible to mistakes.
 
-Disclaimer: I have also used AI (Claude free plan) in a limited capacity, driven by manual review by myself, to parse more complex problems, such as regex patterns. 
+Disclaimer: I have also used AI (Claude free plan) in a limited capacity in the creation of some of the more complex parsing of locations and categorizations, driven by manual review by myself, for example with regex patterns, which I then review before implementing and using on the data. No AI is used to parse the data automatically beyond when the code is written, to ensure I have full control over the rules used to categorize listings.  
 
 ## Data storage
 
