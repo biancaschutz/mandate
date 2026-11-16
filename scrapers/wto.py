@@ -31,8 +31,8 @@ def parse_date(value):
         return None
 
 def build_wto_df(session):
-    # cookies first
-    session.get(f"{BASE}/en-US/{SITE}/jobs")
+    # no cookie warm-up needed: the CXS API answers a bare POST, and hitting the
+    # HTML front end first just adds another request for bot protection to see
 
     url = f"{BASE}/wday/cxs/wto/{SITE}/jobs"
     # handle pagination
@@ -119,8 +119,8 @@ def build_wto_df(session):
 def make_session():
     session = requests.Session()
     retry = Retry(
-        total=6,
-        backoff_factor=2,  # 2, 4, 8, 16, 32s...
+        total=3,
+        backoff_factor=2,  # 2, 4, 8s -- a persistent 429 is an IP block, fail fast
         status_forcelist=(429, 500, 502, 503, 504),
         allowed_methods=None,  # retry POST too (the jobs search is a POST)
         respect_retry_after_header=True,
@@ -132,7 +132,9 @@ def make_session():
 def main():
     session = make_session()
     session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        # same UA as wfp.py, which Workday accepts from GitHub runners
+        "User-Agent": "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
         "Accept": "application/json",
         "Accept-Language": "en-US",
         "Referer": f"{BASE}/en-US/{SITE}/jobs",
