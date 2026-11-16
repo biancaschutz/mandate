@@ -3,10 +3,13 @@
 Has API
 """
 
+import time
 from datetime import datetime
 
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from combiner import upsert_listings
 from location import clean_location, normalize_country
@@ -18,9 +21,12 @@ ORGANIZATION = "WTO"
 DETAIL_BASE = "https://wto.wd103.myworkdayjobs.com/wday/cxs/wto/External"
 SITE = "External"
 
+# Workday rate-limits aggressively (esp. shared CI IPs); pause between requests
+REQUEST_DELAY = 1.0
+
 def parse_date(value):
     try:
-        return datetime.strptime(value, "%Y-%d-%m")
+        return datetime.strptime(value, "%Y-%m-%d")
     except (TypeError, ValueError):
         return None
 
@@ -41,6 +47,7 @@ def build_wto_df(session):
         })
         res.raise_for_status()
         data = res.json()
+        time.sleep(REQUEST_DELAY)
 
         postings = data.get("jobPostings", [])
         if not postings:
@@ -56,8 +63,9 @@ def build_wto_df(session):
         extension = job.get('externalPath')
         if extension:
             path = DETAIL_BASE + job.get('externalPath')
-            res = session.get(path) 
+            res = session.get(path)
             res.raise_for_status()
+            time.sleep(REQUEST_DELAY)
             job_details = res.json()['jobPostingInfo']
             id = job_details['jobReqId']
 
@@ -88,6 +96,9 @@ def build_wto_df(session):
                         )
         else:
             print(f"Details not available for {title}")
+            # Workday listings usually carry the req ID as the first bullet field
+            bullets = job.get('bulletFields') or []
+            id = bullets[0] if bullets else title
             rows.append(
                                         {
                                             "_id": ORGANIZATION + id,
@@ -105,8 +116,21 @@ def build_wto_df(session):
                                     )
     return pd.DataFrame(rows)
 
-def main():
+def make_session():
     session = requests.Session()
+    retry = Retry(
+        total=6,
+        backoff_factor=2,  # 2, 4, 8, 16, 32s...
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=None,  # retry POST too (the jobs search is a POST)
+        respect_retry_after_header=True,
+        raise_on_status=False,  # let raise_for_status() report the final status
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    return session
+
+def main():
+    session = make_session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json",
