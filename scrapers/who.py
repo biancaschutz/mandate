@@ -172,7 +172,7 @@ def fetch_page(session, page_no):
 
 
 def build_who_df(session):
-    # warm-up: Taleo hands out session cookies on the search page
+    # session cookies on the search page
     session.get(f"{BASE}/ex/jobsearch.ftl", timeout=30).raise_for_status()
 
     data = fetch_page(session, 1)

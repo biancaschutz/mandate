@@ -3,6 +3,7 @@
 This is a messy one, with major parsing for qualifications
 """
 
+import json
 import math
 import re
 import time
@@ -12,7 +13,7 @@ from bs4 import BeautifulSoup, Tag
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
-from combiner import upsert_listings
+from combiner import existing_ids, upsert_listings
 from location import clean_location, normalize_country
 
 ORGANIZATION = "UNICEF"
@@ -259,10 +260,11 @@ def parse_search_page(html):
                 "closing_date": parse_closing_date(
                     card_text(card, ".job-component-closing-at span")
                 ),
-                # Job detail pages are behind bot protection, so the posted
-                # date and full qualifications aren't available.
+                # filled in from the detail page by fetch_details
+                "job_level": None,
                 "posted_date": None,
-                "qualifications": "See listing.",
+                # None leaves stored qualifications alone for listings we skip
+                "qualifications": None,
                 "requisition_id": req_id,
             }
         except Exception as e:
@@ -271,6 +273,7 @@ def parse_search_page(html):
 
 
 CARD_SELECTOR = "article.job-search-results-card-col"
+DESCRIPTION_SELECTOR = "div.job-description"
 # robots.txt asks for Crawl-delay: 5
 PAGE_DELAY = 5
 
@@ -292,6 +295,51 @@ def fetch_search_page(browser_page, page):
     return browser_page.content()
 
 
+def json_ld_date_posted(soup):
+    """datePosted from the JobPosting JSON-LD block, if present."""
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+        except json.JSONDecodeError:
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("datePosted"):
+                return item["datePosted"]
+    return None
+
+
+def parse_detail_page(html, job_url=None):
+    """Return the fields only the detail page has (qualifications, posted
+    date, grade, requisition number)."""
+    soup = BeautifulSoup(html, "html.parser")
+    out = {"posted_date": json_ld_date_posted(soup), "qualifications": "See listing."}
+
+    description = soup.select_one(DESCRIPTION_SELECTOR)
+    if description is not None:
+        qualifications = get_qualifications(description, job_url=job_url)
+        if qualifications:
+            out["qualifications"] = qualifications
+
+    # grade, e.g. "P-5", "NO-B", "Consultancy"
+    level = card_text(soup, ".job-component-dropdown-field-1")
+    if level:
+        out["job_level"] = level
+
+    req_id = card_text(soup, ".job-component-requisition-identifier")
+    if req_id:
+        out["requisition_id"] = req_id
+    return out
+
+
+def fetch_details(browser_page, job_url):
+    browser_page.goto(job_url, wait_until="domcontentloaded", timeout=60_000)
+    try:
+        browser_page.wait_for_selector(DESCRIPTION_SELECTOR, timeout=30_000)
+    except PlaywrightTimeout:
+        raise RuntimeError(f"No job description on {job_url} after 30s") from None
+    return parse_detail_page(browser_page.content(), job_url=job_url)
+
+
 def build_unicef_df():
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -307,6 +355,21 @@ def build_unicef_df():
                 if not page_jobs:
                     break
                 jobs.update(page_jobs)
+
+            # only open detail pages for listings not already stored
+            have = existing_ids(ORGANIZATION)
+            new_ids = [_id for _id in jobs if _id not in have]
+            print(
+                f"UNICEF: {len(jobs)} listings, fetching details for {len(new_ids)} new"
+            )
+            for _id in new_ids:
+                job = jobs[_id]
+                time.sleep(PAGE_DELAY)
+                try:
+                    job.update(fetch_details(browser_page, job["url"]))
+                except Exception as e:
+                    print(f"Skipping new listing {job['url']}: {e}")
+                    del jobs[_id]  # not stored, so it's retried next run
         finally:
             browser.close()
 
