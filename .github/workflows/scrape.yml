@@ -16,6 +16,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
+      - name: Install Playwright browser (only for scrapers that use it)
+        run: |
+          file="$(echo '${{ inputs.module }}' | tr . /).py"
+          if grep -q playwright "$file"; then
+            python -m playwright install --with-deps chromium
+          fi
       - run: python -m ${{ inputs.module }}
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
