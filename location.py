@@ -138,8 +138,11 @@ def apply_rules(s: str) -> str:
 # Separates locations in a cleaned string, e.g.
 # "New York, United States of America; Geneva, Switzerland"
 LOCATION_SEP = "; "
-SEGMENT_SPLIT = re.compile(r"\s*[,;|\n]\s*")
+# " - " only with spaces around it, so "Timor-Leste" / "Guinea-Bissau" stay whole
+SEGMENT_SPLIT = re.compile(r"\s*[,;|\n]\s*|\s+[-–—]\s+")
 SENTINEL_RULES = {REMOTE[0], MULTIPLE[0]}
+# UNICEF regional office suffixes, e.g. "Pemba - Mozambique, ESAR"
+REGION_CODES = {"ESAR", "WCAR", "LACR", "MENA", "MENAR", "ECAR", "EAPR", "ROSA", "APR"}
 
 
 def exact_country_code(segment: str) -> int | None:
@@ -160,7 +163,7 @@ def rule_city(segment: str) -> tuple[str, int | None] | None:
 def split_segments(s: str) -> list[str]:
     """Split on , ; | and newlines, re-joining country names that contain a
     comma (e.g. 'China, Hong Kong Special Administrative Region')."""
-    parts = [p for p in SEGMENT_SPLIT.split(s) if p]
+    parts = [p for p in SEGMENT_SPLIT.split(s) if p and p.upper() not in REGION_CODES]
     segments, i = [], 0
     while i < len(parts):
         if i + 1 < len(parts) and exact_country_code(f"{parts[i]}, {parts[i + 1]}"):
@@ -221,8 +224,10 @@ def split_locations(s: str) -> list[str]:
             locations.append(city[0])
         else:
             stray.append(seg)
-    if stray:
-        # trailing city after its country: put it in front
+    if stray and len(groups[-1][0]) == 1:
+        # bare country followed by its city ("Morocco, Marrakech"): put the
+        # city in front. If the location already has a city ("Bangkok,
+        # Thailand, Remote"), trailing extras are dropped.
         locations[last] = ", ".join(stray + [locations[last]])
     return locations
 
@@ -246,7 +251,16 @@ def clean_location(raw: str | None) -> str:
 
     cleaned = []
     for loc in split_locations(s):
-        loc = WHITESPACE.sub(" ", apply_rules(loc)).strip()
+        ruled = apply_rules(loc)
+        if ruled in SENTINEL_RULES:
+            # "Thailand, Remote": a real country wins over the remote /
+            # multiple tag; drop the tag and keep the rest
+            segments = split_segments(loc)
+            if any(exact_country_code(seg) for seg in segments):
+                ruled = ", ".join(
+                    seg for seg in segments if apply_rules(seg) not in SENTINEL_RULES
+                )
+        loc = WHITESPACE.sub(" ", ruled).strip()
         if loc and loc not in cleaned:
             cleaned.append(loc)
     return LOCATION_SEP.join(cleaned)
