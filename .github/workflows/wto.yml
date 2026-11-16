@@ -1,8 +1,9 @@
 name: Scrape WTO
 
+# WTO's Workday tenant 429s GitHub runner IPs, so the daily run happens locally
+# via launchd (~/Library/LaunchAgents/com.mandate.wto.plist). Manual trigger kept
+# in case the block is lifted.
 on:
-  schedule:
-    - cron: "20 18 * * *"
   workflow_dispatch: {}
 
 jobs:
